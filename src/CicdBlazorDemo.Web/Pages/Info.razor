@@ -1,0 +1,27 @@
+@page "/info"
+@using CicdBlazorDemo.Web.Info
+@inject BuildInfoService BuildInfoService
+
+<h3>Build Info</h3>
+
+@if (_info is null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <ul>
+        <li><b>Version:</b> @_info.Version</li>
+        <li><b>Commit:</b> @_info.Commit</li>
+        <li><b>Build Time (UTC):</b> @_info.BuildTimeUtc</li>
+    </ul>
+}
+
+@code {
+    private BuildInfo? _info;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _info = await BuildInfoService.GetAsync();
+    }
+}
