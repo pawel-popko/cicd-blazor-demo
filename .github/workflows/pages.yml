@@ -72,8 +72,8 @@ jobs:
           # Build timestamp in UTC
           BUILD_TIME_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
-          # Simple versioning based on workflow run number
-          VERSION="0.1.${GITHUB_RUN_NUMBER}"
+          # Read version from the csproj (single source of truth)
+          VERSION="$(dotnet msbuild src/CicdBlazorDemo.Web/CicdBlazorDemo.Web.csproj -nologo -t:GetProperty -p:PropertyName=Version -v:q)"
 
           # Overwrite build-info.json inside wwwroot
           cat > src/CicdBlazorDemo.Web/wwwroot/build-info.json <<EOF
