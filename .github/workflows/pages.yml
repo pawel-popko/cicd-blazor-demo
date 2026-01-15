@@ -89,7 +89,8 @@ jobs:
 
       # ----------------------------------------
       # Publish Blazor WebAssembly
-      # BaseHref MUST include repository name
+      # BaseHref SHOULD be set during publish,
+      # but we will still enforce it explicitly
       # for GitHub Pages project sites
       # ----------------------------------------
       - name: Publish Blazor WebAssembly
@@ -97,6 +98,7 @@ jobs:
         run: |
           set -euo pipefail
 
+          # Repository name (used as sub-path on GitHub Pages)
           REPO_NAME="${GITHUB_REPOSITORY##*/}"
 
           dotnet publish src/CicdBlazorDemo.Web \
@@ -105,12 +107,39 @@ jobs:
             -p:BaseHref="/${REPO_NAME}/"
 
       # ----------------------------------------
+      # Enforce correct <base href> in index.html
+      # This is critical for GitHub Pages project sites:
+      # https://<user>.github.io/<repo>/
+      #
+      # Without this, the app will try to load assets
+      # from the root domain and fail to start.
+      # ----------------------------------------
+      - name: Fix base href for GitHub Pages
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          REPO_NAME="${GITHUB_REPOSITORY##*/}"
+          INDEX_FILE="dist/wwwroot/index.html"
+
+          echo "Base href BEFORE fix:"
+          grep -n '<base href=' "$INDEX_FILE" || true
+
+          # Replace root base href with repository-based path
+          sed -i "s|<base href=\"/\" />|<base href=\"/${REPO_NAME}/\" />|g" "$INDEX_FILE"
+          sed -i "s|<base href='/' />|<base href='/${REPO_NAME}/' />|g" "$INDEX_FILE"
+
+          echo "Base href AFTER fix:"
+          grep -n '<base href=' "$INDEX_FILE" || true
+
+      # ----------------------------------------
       # Upload published output as GitHub Pages artifact
       # ----------------------------------------
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: dist/wwwroot
+
 
 # ============================================
 # DEPLOY JOB
