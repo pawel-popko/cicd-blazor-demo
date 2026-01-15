@@ -13,7 +13,10 @@ else
     <ul>
         <li><b>Version:</b> @_info.Version</li>
         <li><b>Commit:</b> @_info.Commit</li>
-        <li><b>Build Time (UTC):</b> @_info.BuildTimeUtc</li>
+        <li>
+            <b>Build Time (UTC):</b>
+            @_info.BuildTimeUtc.ToString("yyyy-MM-dd HH:mm:ss 'UTC'")
+        </li>
     </ul>
 }
 
