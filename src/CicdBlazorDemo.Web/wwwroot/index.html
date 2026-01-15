@@ -29,6 +29,18 @@
         <span class="dismiss">🗙</span>
     </div>
     <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
+    <script type="text/javascript">
+        // Restore the original path after GitHub Pages 404.html redirected to:
+        // /<repo>/?/some/route
+        (function () {
+            var l = window.location;
+            if (l.search && l.search.startsWith("?/")) {
+            var route = l.search.slice(2); // remove "?/"
+            var newUrl = l.pathname.replace(/\/$/, "") + "/" + route + l.hash;
+            history.replaceState(null, "", newUrl);
+            }
+        })();
+    </script>
 </body>
 
 </html>
