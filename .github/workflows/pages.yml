@@ -73,7 +73,7 @@ jobs:
           BUILD_TIME_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
           # Read version from the csproj (single source of truth)
-          VERSION="$(dotnet msbuild src/CicdBlazorDemo.Web/CicdBlazorDemo.Web.csproj -nologo -t:GetProperty -p:PropertyName=Version -v:q)"
+          VERSION="$(grep -oPm1 '(?<=<Version>)[^<]+' src/CicdBlazorDemo.Web/CicdBlazorDemo.Web.csproj)"
 
           # Overwrite build-info.json inside wwwroot
           cat > src/CicdBlazorDemo.Web/wwwroot/build-info.json <<EOF
