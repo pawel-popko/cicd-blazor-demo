@@ -1,0 +1,135 @@
+# ============================================
+# GitHub Actions workflow
+# Builds Blazor WebAssembly app
+# Generates build-info.json
+# Deploys to GitHub Pages
+# ============================================
+
+name: Build & Deploy (GitHub Pages)
+
+# --------------------------------------------
+# When should this workflow run?
+# - on every push to main
+# - or manually (workflow_dispatch)
+# --------------------------------------------
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+# --------------------------------------------
+# Permissions required by GitHub Pages
+# --------------------------------------------
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# --------------------------------------------
+# Prevent concurrent deployments to Pages
+# --------------------------------------------
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+# ============================================
+# BUILD JOB
+# ============================================
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ----------------------------------------
+      # Checkout repository source code
+      # ----------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ----------------------------------------
+      # Install .NET SDK
+      # ----------------------------------------
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      # ----------------------------------------
+      # Generate build-info.json dynamically
+      # This file will be served by Blazor as a static asset
+      # ----------------------------------------
+      - name: Generate build-info.json
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Repository name (used later for BaseHref)
+          REPO_NAME="${GITHUB_REPOSITORY##*/}"
+
+          # Short git commit hash
+          COMMIT_SHORT="$(git rev-parse --short HEAD)"
+
+          # Build timestamp in UTC
+          BUILD_TIME_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          # Simple versioning based on workflow run number
+          VERSION="0.1.${GITHUB_RUN_NUMBER}"
+
+          # Overwrite build-info.json inside wwwroot
+          cat > src/CicdBlazorDemo.Web/wwwroot/build-info.json <<EOF
+          {
+            "version": "${VERSION}",
+            "commit": "${COMMIT_SHORT}",
+            "buildTimeUtc": "${BUILD_TIME_UTC}"
+          }
+          EOF
+
+          echo "Generated build-info.json:"
+          cat src/CicdBlazorDemo.Web/wwwroot/build-info.json
+
+      # ----------------------------------------
+      # Publish Blazor WebAssembly
+      # BaseHref MUST include repository name
+      # for GitHub Pages project sites
+      # ----------------------------------------
+      - name: Publish Blazor WebAssembly
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          REPO_NAME="${GITHUB_REPOSITORY##*/}"
+
+          dotnet publish src/CicdBlazorDemo.Web \
+            -c Release \
+            -o dist \
+            -p:BaseHref="/${REPO_NAME}/"
+
+      # ----------------------------------------
+      # Upload published output as GitHub Pages artifact
+      # ----------------------------------------
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/wwwroot
+
+# ============================================
+# DEPLOY JOB
+# ============================================
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+
+    # ----------------------------------------
+    # GitHub Pages environment
+    # ----------------------------------------
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      # ----------------------------------------
+      # Deploy uploaded artifact to GitHub Pages
+      # ----------------------------------------
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
